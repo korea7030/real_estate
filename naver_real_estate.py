@@ -155,7 +155,9 @@ def get_vl_details(vl_code):
         r_details.encoding = "utf-8-sig"
 
         vl_detail = r_details.json().get('articleDetail')
+        deal_warrant_price = r_details.json().get('articleAddition').get('dealOrWarrantPrc')
         vl_detail['link'] = f'https://new.land.naver.com/houses?articleNo={vl_code}'
+        vl_detail['dealOrWarrantPrc'] = deal_warrant_price
         return vl_detail
         
 
@@ -351,13 +353,46 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
     placeholder.empty()
 
     if all_vl_data:
-        required_columns = ['articleNo', 'articleName', 'cortarNo', 'totalDongCount', 'buildingTypeName', 'realestateTypeName', 'tradeTypeName',  'cityName', 'divisionName', 
+        # 한글 컬럼명 딕셔너리 매핑
+        column_name_mapping = {
+            'articleNo': '매물번호',
+            'articleName': '매물명',
+            'cortarNo': '코드',
+            'totalDongCount': '건물 동 수',
+            'buildingTypeName': '건물 유형',
+            'realestateTypeName': '매물 유형',
+            'tradeTypeName': '거래 유형',
+            'cityName': '시/도',
+            'divisionName': '시/군/구',
+            'sectionName': '읍면동',
+            'walkingTimeToNearSubway': '지하철 도보시간',
+            'grandPlanList': '대지 계획',
+            'detailAddress': '상세 주소',
+            'exposureAddress': '노출 주소',
+            'roomCount': '방 개수',
+            'bathroomCount': '욕실 개수',
+            'moveInTypeName': '입주 형태',
+            'moveInDiscussionPossibleYN': '입주 협의 가능여부',
+            'articleFeatureDescription': '특징 설명',
+            'detailDescription': '상세 설명',
+            'parkingCount': '주차 가능 대수',
+            'parkingPerHouseholdCount': '가구당 주차 대수',
+            'parkingPossibleYN': '주차 가능 여부',
+            'floorLayerName': '층 정보',
+            'lawUsage': '법적 용도',
+            'tagList': '태그',
+            'link': '매물 링크',
+            'dealOrWarrantPrc': '매매가',
+        }
+
+        required_columns = ['articleNo', 'articleName', 'dealOrWarrantPrc', 'cortarNo', 'totalDongCount', 'buildingTypeName', 'realestateTypeName', 'tradeTypeName',  'cityName', 'divisionName', 
                             'sectionName', 'walkingTimeToNearSubway', 'grandPlanList', 'detailAddress', 'exposureAddress', 'roomCount', 'bathroomCount', 'moveInTypeName', 'moveInDiscussionPossibleYN',
                             'articleFeatureDescription', 'detailDescription', 'parkingCount', 'parkingPerHouseholdCount', 'parkingPossibleYN', 'floorLayerName', 'lawUsage', 'tagList', 'link']
         final_df = pd.DataFrame(all_vl_data)
         final_df = final_df[required_columns]
         link_col = final_df.pop('link')
         final_df.insert(1, 'link', link_col)
+        final_df = final_df.rename(columns=column_name_mapping)
         # 엑셀 파일로 저장
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -368,7 +403,7 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
         st.dataframe(
             final_df,
             column_config={
-                'link': st.column_config.LinkColumn('link')
+                '매물 링크': st.column_config.LinkColumn('매물 링크')
             },
             hide_index=True
         )
@@ -389,10 +424,7 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
             file_name=f"{city_name}_{sigungu_name}_apartments.csv",
             mime="text/csv"
         )
-    else:
-        st.write("No data to save.")
-
-    if all_apt_data:
+    elif all_apt_data:
         final_df = pd.DataFrame(all_apt_data)
         final_df['si_do_name'] = city_name
         final_df['sigungu_name'] = sigungu_name
