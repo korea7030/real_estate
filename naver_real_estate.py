@@ -34,19 +34,66 @@ def get_dong_codes_for_city(city_name, sigungu_name=None, json_path='korea_regio
                 return sigungu_codes, dong_codes
     return None, None
 
+def get_vl_list(dong_code):
+    headers = {
+        'accept': '*/*',
+        'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NDI2MzA5NDAsImV4cCI6MTc0MjY0MTc0MH0.6ybkX7eNOQCpZ7yNzbqV-d8KJ-O2RDRcmLeBf3U-fqg',
+        'cache-control': 'no-cache',
+        'pragma': 'no-cache',
+        'priority': 'u=1, i',
+        'referer': 'https://new.land.naver.com/houses?a=VL&b=A1&e=RETAIL',
+        'sec-ch-ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+        # 'cookie': 'NNB=4W7YAA5ZVMPWK; ASID=dd94a0410000018e5520a76800000047; NFS=2; tooltipDisplayed=true; recent_card_list=10225,10221,10295,10252,652,10286,1030,10396,10395; _ga=GA1.1.1501423069.1705550738; _ga_8P4PY65YZ2=GS1.1.1728868272.1.1.1728868278.54.0.0; ba.uuid=c40f8e46-1824-4094-b082-f17ac3e3080b; _gcl_au=1.1.1320614230.1735782083; naverfinancial_CID=6739685caf394e2c9ea8c5d6a7bc3d0b; _tt_enable_cookie=1; _ttp=PIEh2r3cy-6ykpYTyaMm4ftWdLy.tt.1; _ga_Q7G1QTKPGB=GS1.1.1735782082.1.1.1735782151.0.0.0; _fwb=237FOAiAL4reeqTMknBjyjg.1737348126266; nhn.realestate.article.trade_type_cd=A1; SHOW_FIN_BADGE=N; NAC=JtXWBggF6pHy; BNB_FINANCE_HOME_TOOLTIP_MYASSET=true; _ga_451MFZ9CFM=GS1.1.1740713655.3.0.1740713661.0.0.0; page_uid=i9zczlqVN8VsslHoLpVssssstlV-258204; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.ipaddress_city=1100000000; NACT=1; landHomeFlashUseYn=Y; realestate.beta.lastclick.cortar=1174000000; _fwb=237FOAiAL4reeqTMknBjyjg.1737348126266; SRT30=1742604741; SRT5=1742630848; BUC=DgLwt41giN4K07MutHMCBhV2Q-5c-t3Gos_jccnmcgo=; REALESTATE=Sat%20Mar%2022%202025%2017%3A09%3A00%20GMT%2B0900%20(Korean%20Standard%20Time)',
+    }
+
+    required_columns = ['articleNo', 'articleName', 'articleStatus', 'realEstateTypeCode', 'realEstateTypeName', 'articleRealEstateTypeCode', 'articleRealEstateTypeName', 'tradeTypeCode', 'tradeTypeName', 'verificationTypeCode', 'floorInfo', 'priceChangeState', 'isPriceModification', 'dealOrWarrantPrc', 'area1', 'area2', 'direction', 'articleConfirmYmd', 'representativeImgUrl', 'representativeImgTypeCode', 'representativeImgThumb', 'siteImageCount', 'articleFeatureDesc', 'tagList', 'buildingName', 'sameAddrCnt', 'sameAddrDirectCnt', 'sameAddrMaxPrc', 'sameAddrMinPrc', 'cpid', 'cpName', 'cpPcArticleUrl', 'cpPcArticleBridgeUrl', 'cpPcArticleLinkUseAtArticleTitleYn', 'cpPcArticleLinkUseAtCpNameYn', 'cpMobileArticleUrl', 'cpMobileArticleLinkUseAtArticleTitleYn', 'cpMobileArticleLinkUseAtCpNameYn', 'latitude', 'longitude', 'isLocationShow', 'realtorName', 'realtorId', 'tradeCheckedByOwner', 'isDirectTrade', 'isInterest', 'isComplex', 'detailAddress', 'detailAddressYn', 'virtualAddressYn', 'isVrExposed', 'elevatorCount']
+
+    try:
+        r = requests.get(
+            f'https://new.land.naver.com/api/articles?cortarNo={dong_code}&realEstateType=VL&tradeType=A1&priceType=RETAIL',
+            headers=headers,
+        )
+        r.encoding = "utf-8-sig"
+        data = r.json()
+        
+        if 'articleList' in data and isinstance(data['articleList'], list):
+            df = pd.DataFrame(data['articleList'])
+
+            for col in required_columns:
+                if col not in df.columns:
+                    df[col] = None
+
+            return df[required_columns]
+        else:
+            st.warning(f"No data found for {dong_code}.")
+            return pd.DataFrame(columns=required_columns)
+    except Exception as e:
+        st.error(f"Error fetching data for {dong_code}: {e}")
+        return pd.DataFrame(columns=required_columns)
+
 # 아파트 코드 리스트 가져오기
 def get_apt_list(dong_code):
-    down_url = f'https://new.land.naver.com/api/regions/complexes?cortarNo={dong_code}&amp;realEstateType=APT&amp;order='
+    down_url = f'https://new.land.naver.com/api/regions/complexes?cortarNo={dong_code}&realEstateType=A1&order='
+    referer_url = f"https://new.land.naver.com/complexes/102378?a=APT&b=A1&e=RETAIL"
+
     header = {
         "Accept-Encoding": "gzip",
         "Host": "new.land.naver.com",
-        "Referer": "https://new.land.naver.com/complexes/102378?a=APT&b=A1&e=RETAIL",
+        "Referer": referer_url,
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
-        "User-Agent": "Mozilla/5.0"
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     }
 
+    required_columns = ['complexNo', 'complexName', 'buildYear', 'totalHouseholdCount', 'areaSize', 'price', 'address', 'floor']
     try:
         r = requests.get(down_url, headers=header)
         r.encoding = "utf-8-sig"
@@ -54,7 +101,6 @@ def get_apt_list(dong_code):
 
         if 'complexList' in data and isinstance(data['complexList'], list):
             df = pd.DataFrame(data['complexList'])
-            required_columns = ['complexNo', 'complexName', 'buildYear', 'totalHouseholdCount', 'areaSize', 'price', 'address', 'floor']
 
             for col in required_columns:
                 if col not in df.columns:
@@ -84,6 +130,38 @@ def format_amount(amount):
     else:  # 만 단위 미만
         return f"{amount:,}원"
 
+
+def get_vl_details(vl_code):
+    headers = {
+        'accept': '*/*',
+        'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NDI2MzA5NDAsImV4cCI6MTc0MjY0MTc0MH0.6ybkX7eNOQCpZ7yNzbqV-d8KJ-O2RDRcmLeBf3U-fqg',
+        'priority': 'u=1, i',
+        'referer': f'https://new.land.naver.com/houses?a=VL&e=RETAIL&articleNo={vl_code}',
+        'sec-ch-ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+        # 'cookie': 'NNB=4W7YAA5ZVMPWK; ASID=dd94a0410000018e5520a76800000047; NFS=2; tooltipDisplayed=true; recent_card_list=10225,10221,10295,10252,652,10286,1030,10396,10395; _ga=GA1.1.1501423069.1705550738; _ga_8P4PY65YZ2=GS1.1.1728868272.1.1.1728868278.54.0.0; ba.uuid=c40f8e46-1824-4094-b082-f17ac3e3080b; _gcl_au=1.1.1320614230.1735782083; naverfinancial_CID=6739685caf394e2c9ea8c5d6a7bc3d0b; _tt_enable_cookie=1; _ttp=PIEh2r3cy-6ykpYTyaMm4ftWdLy.tt.1; _ga_Q7G1QTKPGB=GS1.1.1735782082.1.1.1735782151.0.0.0; _fwb=237FOAiAL4reeqTMknBjyjg.1737348126266; nhn.realestate.article.trade_type_cd=A1; SHOW_FIN_BADGE=N; NAC=JtXWBggF6pHy; BNB_FINANCE_HOME_TOOLTIP_MYASSET=true; _ga_451MFZ9CFM=GS1.1.1740713655.3.0.1740713661.0.0.0; page_uid=i9zczlqVN8VsslHoLpVssssstlV-258204; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.ipaddress_city=1100000000; NACT=1; landHomeFlashUseYn=Y; realestate.beta.lastclick.cortar=1174000000; _fwb=237FOAiAL4reeqTMknBjyjg.1737348126266; SRT30=1742604741; REALESTATE=Sat%20Mar%2022%202025%2017%3A09%3A00%20GMT%2B0900%20(Korean%20Standard%20Time); SRT5=1742632297; BUC=mhRD9Z3IIXEGy1XxiChff8bhoV9smvxeWaDDEGE3-fI=',
+    }
+    
+    try:
+        details_url = f'https://new.land.naver.com/api/articles/{vl_code}'
+        # 기본 정보 가져오기
+        r_details = requests.get(details_url, headers=headers)
+        r_details.encoding = "utf-8-sig"
+
+        vl_detail = r_details.json().get('articleDetail')
+        vl_detail['link'] = f'https://new.land.naver.com/houses?articleNo={vl_code}'
+        return vl_detail
+        
+
+    except Exception as e:
+        st.error(f"Error fetching details for {vl_code}: {e}")
+        return []
 # 아파트 코드로 상세 정보 가져오기
 def get_apt_details(apt_code):
     direction_dict = {
@@ -230,31 +308,89 @@ def wrap_url_with_a_tag(url):
     return f'<a href="{url}">link</a>'
 
 # 아파트 정보를 수집하는 함수(네이버)
-def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_code):
+def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_code, property_type):
     all_apt_data = []
+    all_vl_data = []
     # 수집 중 표시를 위한 placeholder
     placeholder = st.empty()
 
     placeholder.write(f"{dong_name} ({dong_code}) - 수집중입니다.")
-    apt_codes = get_apt_list(dong_code)
+    if property_type == 'APT':
+        apt_codes = get_apt_list(dong_code)
 
-    if not apt_codes.empty:
-        for _, apt_info in apt_codes.iterrows():
-            apt_code = apt_info['complexNo']
-            apt_name = apt_info['complexName']
-            placeholder.write(f"{apt_name} ({apt_code}) - 수집중입니다.")
-            listings = get_apt_details(apt_code)
-            
-            if listings:
-                for listing in listings:
-                    listing['dong_code'] = dong_code
-                    listing['dong_name'] = dong_name
-                    all_apt_data.append(listing)
+        if not apt_codes.empty:
+            for _, apt_info in apt_codes.iterrows():
+                apt_code = apt_info['complexNo']
+                apt_name = apt_info['complexName']
+                placeholder.write(f"{apt_name} ({apt_code}) - 수집중입니다.")
+                listings = get_apt_details(apt_code)
+                
+                if listings:
+                    for listing in listings:
+                        listing['dong_code'] = dong_code
+                        listing['dong_name'] = dong_name
+                        all_apt_data.append(listing)
+        else:
+            st.warning(f"No apartment codes found for {dong_code}")
     else:
-        st.warning(f"No apartment codes found for {dong_code}")
+        vl_codes = get_vl_list(dong_code)
+
+        if not vl_codes.empty:
+            for _, vl_info in vl_codes.iterrows():
+                vl_code = vl_info['articleNo']
+                vl_name = vl_info['articleName']
+
+                placeholder.write(f'{vl_name} ({vl_code}) - 수집중입니다.')
+
+                vl_details = get_vl_details(vl_code)
+
+                if vl_details:
+                    all_vl_data.append(vl_details)
 
     # 수집이 완료된 후, 수집 중 메시지를 지우기
     placeholder.empty()
+
+    if all_vl_data:
+        required_columns = ['articleNo', 'articleName', 'cortarNo', 'totalDongCount', 'buildingTypeName', 'realestateTypeName', 'tradeTypeName',  'cityName', 'divisionName', 
+                            'sectionName', 'walkingTimeToNearSubway', 'grandPlanList', 'detailAddress', 'exposureAddress', 'roomCount', 'bathroomCount', 'moveInTypeName', 'moveInDiscussionPossibleYN',
+                            'articleFeatureDescription', 'detailDescription', 'parkingCount', 'parkingPerHouseholdCount', 'parkingPossibleYN', 'floorLayerName', 'lawUsage', 'tagList', 'link']
+        final_df = pd.DataFrame(all_vl_data)
+        final_df = final_df[required_columns]
+        link_col = final_df.pop('link')
+        final_df.insert(1, 'link', link_col)
+        # 엑셀 파일로 저장
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            final_df.to_excel(writer, index=False)
+        output.seek(0)
+
+        st.write("빌라 정보 수집 완료:")
+        st.dataframe(
+            final_df,
+            column_config={
+                'link': st.column_config.LinkColumn('link')
+            },
+            hide_index=True
+        )
+
+        # 엑셀 파일 다운로드 버튼
+        st.download_button(
+            label="Download Excel",
+            data=output,
+            file_name=f"{city_name}_{sigungu_name}_apartments.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        # CSV 파일 다운로드 버튼
+        csv = final_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name=f"{city_name}_{sigungu_name}_apartments.csv",
+            mime="text/csv"
+        )
+    else:
+        st.write("No data to save.")
 
     if all_apt_data:
         final_df = pd.DataFrame(all_apt_data)
@@ -388,7 +524,10 @@ if selected_sido and selected_sido != "선택하세요":
         selected_eup_myeon_dong = st.selectbox("읍/면/동 선택", ["선택하세요"] + eup_myeon_dong_list)
 
         if selected_eup_myeon_dong and selected_eup_myeon_dong != "선택하세요":
+            property_type = st.radio("매물 종류 선택", ["APT", "VL"], index=0)
+
             st.success(f"선택한 지역: {selected_sido} > {selected_sigungu} > {selected_eup_myeon_dong}")
+            st.write(f"선택한 매물 유형: {property_type}")
 
             if st.button("정보 수집 시작"):
-                naver_collect_apt_info_for_city(selected_sido, selected_sigungu, selected_eup_myeon_dong, eup_myeon_dong_dict[selected_eup_myeon_dong])
+                naver_collect_apt_info_for_city(selected_sido, selected_sigungu, selected_eup_myeon_dong, eup_myeon_dong_dict[selected_eup_myeon_dong], property_type)
