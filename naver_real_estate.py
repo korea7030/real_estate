@@ -57,7 +57,7 @@ def get_vl_list(dong_code):
 
     try:
         r = requests.get(
-            f'https://new.land.naver.com/api/articles?cortarNo={dong_code}&realEstateType=VL&tradeType=A1&priceType=RETAIL',
+            f'https://new.land.naver.com/api/articles?cortarNo={dong_code}&realEstateType=VL&tradeType=A1&order=prc',
             headers=headers,
         )
         r.encoding = "utf-8-sig"
@@ -80,8 +80,8 @@ def get_vl_list(dong_code):
 
 # 아파트 코드 리스트 가져오기
 def get_apt_list(dong_code):
-    down_url = f'https://new.land.naver.com/api/regions/complexes?cortarNo={dong_code}&realEstateType=A1&order='
-    referer_url = f"https://new.land.naver.com/complexes/102378?a=APT&b=A1&e=RETAIL"
+    down_url = f'https://new.land.naver.com/api/regions/complexes?cortarNo={dong_code}&realEstateType=A1&order=prc'
+    referer_url = f"https://new.land.naver.com/complexes/{dong_code}?a=APT&b=A1"
 
     header = {
         "Accept-Encoding": "gzip",
@@ -156,7 +156,7 @@ def get_vl_details(vl_code):
 
         vl_detail = r_details.json().get('articleDetail')
         deal_warrant_price = r_details.json().get('articleAddition').get('dealOrWarrantPrc')
-        vl_detail['link'] = f'https://new.land.naver.com/houses?articleNo={vl_code}'
+        vl_detail['link'] = f'https://fin.land.naver.com/articles/{vl_code}'
         vl_detail['dealOrWarrantPrc'] = deal_warrant_price
         return vl_detail
         
@@ -176,18 +176,34 @@ def get_apt_details(apt_code):
         'SS': '남향',
         'WN': '북서향'
     }
-    details_url = f'https://fin.land.naver.com/complexes/{apt_code}?tab=complex-info'
-    article_url = f'https://fin.land.naver.com/complexes/{apt_code}?tradeTypes=A1&tab=article'
-    front_api_url = 'https://fin.land.naver.com/front-api/v1/complex/article/list?complexNumber={}&userChannelType=PC&page={}'
+    details_url = f'https://new.land.naver.com/complexes/{apt_code}?tab=complex-info'
+    article_url = f'https://new.land.naver.com/complexes/{apt_code}'
+    # front_api_url = 'https://new.land.naver.com/front-api/v1/complex/article/list?complexNumber={}&userChannelType=PC&page={}'
 
     header = {
-        "Accept-Encoding": "gzip",
-        "Host": "fin.land.naver.com",
-        "Referer": "https://fin.land.naver.com/",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        # 'accept': '*/*',
+        # 'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        # "Host": "new.land.naver.com",
+        # "Referer": f"https://new.land.naver.com/complexes/{apt_code}",
+        # "Sec-Fetch-Dest": "empty",
+        # "Sec-Fetch-Mode": "cors",
+        # "Sec-Fetch-Site": "same-origin",
+        # 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        # 'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NDcxMTQ4MzcsImV4cCI6MTc0NzEyNTYzN30.aWETuTI31c8zugUgSHYvDZSBZQ-RbRXVmFqLWdO8zdY',
+        'accept': '*/*',
+        'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NDcxMTQ4MzcsImV4cCI6MTc0NzEyNTYzN30.aWETuTI31c8zugUgSHYvDZSBZQ-RbRXVmFqLWdO8zdY',
+        'cache-control': 'no-cache',
+        'pragma': 'no-cache',
+        'priority': 'u=1, i',
+        'referer': f'https://new.land.naver.com/complexes/{apt_code}',
+        'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
     }
     
     try:
@@ -240,55 +256,47 @@ def get_apt_details(apt_code):
         # 매물 front-api
         has_next = True
         article_listing = []
-        page = 0
+        page = 1
         temp_article_listing = {}
 
         while has_next:
-            r_front_article = requests.get(front_api_url.format(apt_code, page), headers=header)
-            front_response = front_result = r_front_article.json()
-            # print(r_front_article.json().get('result'))
-            front_result = front_response.get('result')
-            has_next = front_result.get('hasNextPage')
-            front_list = front_result.get('list')
+            # front_api_url = f'https://new.land.naver.com/api/articles/complex/{apt_code}?realEstateType=APT&priceType=RETAIL&page={page}&complexNo={apt_code}'
+            front_api_url = f'https://new.land.naver.com/api/articles/complex/{apt_code}?realEstateType=APT&tradeType=A1&directions=&page={page}&complexNo={apt_code}&order=prc'
+
+            r_front_article = requests.get(front_api_url, headers=header)
+            front_response = r_front_article.json()
+
+            has_next = front_response.get('isMoreData')
+            front_list = front_response.get('articleList')
 
             for f_l in front_list:
-                article_info = f_l.get('representativeArticleInfo')
-                duplicate_article_info = f_l.get('duplicatedArticlesInfo')
-                article_name = article_info.get('complexName') + ' ' + article_info.get('dongName')
-                exclusive_space_info = str(article_info.get('spaceInfo').get('exclusiveSpace')) + article_info.get('spaceInfo').get('nameType')
-                supply_space_info = str(article_info.get('spaceInfo').get('supplySpace')) + article_info.get('spaceInfo').get('nameType')
+                article_name = f_l.get('articleName') + ' ' + f_l.get('buildingName')
+                article_no = f_l.get('articleNo')
+                exclusive_space_info = str(f_l.get('area2')) + '㎡'
+                supply_space_info = str(f_l.get('area1')) + '㎡'
+                deal_or_warrant_prc = f_l.get('dealOrWarrantPrc')
+                directions = f_l.get('direction')
+                floor_info = f_l.get('floorInfo')
+                comment = f_l.get('articleFeatureDesc')
+                realtor_name = f_l.get('realtorName')
+                tag_list = f_l.get('tagList')
+                trade_type_name = f_l.get('tradeTypeName')
+                article_link = f'https://fin.land.naver.com/articles/{article_no}'
+                # /3322?ms=37.530126,127.123771,15&a=APT:PRE:ABYG:JGC&e=RETAIL&articleNo=2522031285
+                temp_article_listing['매물명'] = article_name
+                temp_article_listing['매물번호'] = article_no
+                temp_article_listing['거래방식'] = trade_type_name
+                temp_article_listing['층수'] = floor_info
+                temp_article_listing['면적'] = exclusive_space_info + ' (' +supply_space_info+ ')'
+                temp_article_listing['코멘트'] = comment
+                temp_article_listing['방향'] = directions
+                temp_article_listing['매매가'] = deal_or_warrant_prc
+                temp_article_listing['중개업체'] = realtor_name
+                temp_article_listing['태그'] = tag_list
+                temp_article_listing['매물 링크'] = article_link
                 
-                if article_info.get('tradeType') == 'A1':
-                    temp_article_listing['매물명'] = article_name
-                    temp_article_listing['거래방식'] = '매매'
-                    temp_article_listing['층수'] = article_info.get('articleDetail').get('floorInfo') + '층'
-                    temp_article_listing['면적'] = exclusive_space_info + '㎡' + '(' + supply_space_info + ')'
-                    temp_article_listing['코멘트'] = article_info.get('articleDetail').get('articleFeatureDescription')
-                    direction_info = article_info.get('articleDetail').get('direction')
-                    temp_article_listing['방향'] = direction_dict.get(direction_info)
-
-                    if duplicate_article_info:
-                        article_info_list = duplicate_article_info.get('articleInfoList')
-                        for a_i in article_info_list:
-                            price_info = a_i.get('priceInfo').get('dealPrice')
-                            article_detail = a_i.get('articleDetail')
-                            broker_info = a_i.get('brokerInfo')
-                            media_info = a_i.get('articleMediaDto')
-                            # print('!!!!!!!! ', article_name, '1!!!!!!!!!!!!!!!!!!!!!', price_info)
-                            temp_article_listing['매매가'] = format_amount(price_info)
-                            temp_article_listing['매물link'] = 'https://fin.land.naver.com/articles/'+article_detail.get('articleNumber')
-                            temp_article_listing['중개업체'] = broker_info.get('brokerageName')
-                            temp_article_listing['이미지'] = media_info.get('imageUrl')
-                            combined_listing = {**detail_dict, **temp_article_listing}
-                            article_listing.append(combined_listing)
-                    else:
-                        price_info = article_info.get('priceInfo').get('dealPrice')
-                        temp_article_listing['매매가'] = format_amount(price_info)
-                        temp_article_listing['매물link'] = 'https://fin.land.naver.com/articles/'+article_info.get('articleNumber')
-                        temp_article_listing['중개업체'] = article_info.get('brokerageName')
-                        temp_article_listing['이미지'] = article_info.get('articleMediaDto').get('imageUrl')
-                        combined_listing = {**detail_dict, **temp_article_listing}
-                        article_listing.append(combined_listing)
+                combined_listing = {**detail_dict, **temp_article_listing}
+                article_listing.append(combined_listing)
 
             if has_next:
                 page += 1
@@ -302,9 +310,6 @@ def get_apt_details(apt_code):
     except Exception as e:
         st.error(f"Error fetching details for {apt_code}: {e}")
         return []
-
-def make_clickable(row):
-    return f'<a href="https://fin.land.naver.com/articles/{row["articleNumber"]}" target="_blank">{row["complexNo"]}</a>'
 
 def wrap_url_with_a_tag(url):
     return f'<a href="{url}">link</a>'
@@ -376,7 +381,7 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
             'articleFeatureDescription': '특징 설명',
             'detailDescription': '상세 설명',
             'parkingCount': '주차 가능 대수',
-            'parkingPerHouseholdCount': '가구당 주차 대수',
+            # 'parkingPerHouseholdCount': '가구당 주차 대수',
             'parkingPossibleYN': '주차 가능 여부',
             'floorLayerName': '층 정보',
             'lawUsage': '법적 용도',
@@ -387,7 +392,7 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
 
         required_columns = ['articleNo', 'articleName', 'dealOrWarrantPrc', 'cortarNo', 'totalDongCount', 'buildingTypeName', 'realestateTypeName', 'tradeTypeName',  'cityName', 'divisionName', 
                             'sectionName', 'walkingTimeToNearSubway', 'grandPlanList', 'detailAddress', 'exposureAddress', 'roomCount', 'bathroomCount', 'moveInTypeName', 'moveInDiscussionPossibleYN',
-                            'articleFeatureDescription', 'detailDescription', 'parkingCount', 'parkingPerHouseholdCount', 'parkingPossibleYN', 'floorLayerName', 'lawUsage', 'tagList', 'link']
+                            'articleFeatureDescription', 'detailDescription', 'parkingCount', 'parkingPossibleYN', 'floorLayerName', 'lawUsage', 'tagList', 'link']
         final_df = pd.DataFrame(all_vl_data)
         final_df = final_df[required_columns]
         link_col = final_df.pop('link')
@@ -431,8 +436,8 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
         final_df['dong_name'] = dong_name if dong_name else '전체'
         final_df.pop('complexName')
 
-        link_col = final_df.pop('매물link')
-        final_df.insert(1, '매물link', link_col)
+        link_col = final_df.pop('매물 링크')
+        final_df.insert(1, '매물 링크', link_col)
         price_col = final_df.pop('매매가')
         final_df.insert(2, '매매가', price_col)
         complex_col = final_df.pop('매물명')
@@ -445,7 +450,7 @@ def naver_collect_apt_info_for_city(city_name, sigungu_name, dong_name, dong_cod
         st.dataframe(
             final_df,
             column_config={
-                '매물link': st.column_config.LinkColumn('매물link'),
+                '매물 링크': st.column_config.LinkColumn('매물 링크'),
                 '이미지': st.column_config.LinkColumn('이미지')
             },
             hide_index=True
