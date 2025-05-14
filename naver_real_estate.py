@@ -5,7 +5,12 @@ import requests
 import json
 from bs4 import BeautifulSoup
 from IPython.display import HTML
+from dotenv import load_dotenv
 
+
+import os
+
+load_dotenv()
 
 # JSON 파일에서 법정동 코드 가져오기
 def get_dong_codes_for_city(city_name, sigungu_name=None, json_path='korea_region_data.json'):
@@ -35,10 +40,11 @@ def get_dong_codes_for_city(city_name, sigungu_name=None, json_path='korea_regio
     return None, None
 
 def get_vl_list(dong_code):
+    apt_token = os.environ.get("apt_token")
     headers = {
         'accept': '*/*',
         'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NDI2MzA5NDAsImV4cCI6MTc0MjY0MTc0MH0.6ybkX7eNOQCpZ7yNzbqV-d8KJ-O2RDRcmLeBf3U-fqg',
+        'authorization': f'Bearer {apt_token}',
         'cache-control': 'no-cache',
         'pragma': 'no-cache',
         'priority': 'u=1, i',
@@ -132,10 +138,11 @@ def format_amount(amount):
 
 
 def get_vl_details(vl_code):
+    vl_token = os.environ.get('vl_token')
     headers = {
         'accept': '*/*',
         'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NDI2MzA5NDAsImV4cCI6MTc0MjY0MTc0MH0.6ybkX7eNOQCpZ7yNzbqV-d8KJ-O2RDRcmLeBf3U-fqg',
+        'authorization': f'Bearer {vl_token}',
         'priority': 'u=1, i',
         'referer': f'https://new.land.naver.com/houses?a=VL&e=RETAIL&articleNo={vl_code}',
         'sec-ch-ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
